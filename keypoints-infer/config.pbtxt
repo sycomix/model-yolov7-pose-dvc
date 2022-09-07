@@ -1,6 +1,6 @@
 name: "keypoints-infer"
 platform: "onnxruntime_onnx"
-max_batch_size: 32
+max_batch_size: 8
 instance_group [
   {
     count: 1
@@ -9,3 +9,15 @@ instance_group [
 ]
 dynamic_batching { }
 version_policy: { all { }}
+model_warmup [{
+    name : "keypoints-infer"
+    batch_size: 8
+    inputs {
+        key: "images"
+        value: {
+            data_type: TYPE_FP32
+            dims: [ 3, 960, 960 ]
+            random_data : True
+        }
+    }
+}]
