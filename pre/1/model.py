@@ -95,7 +95,10 @@ class TritonPythonModel(object):
 
             for img in batch_in:  # img is shape (1,)
                 pil_img = Image.open(io.BytesIO(img.astype(bytes)))
-                image = cv2.cvtColor(np.array(pil_img), cv2.COLOR_BGR2RGB)
+                image = np.array(pil_img)
+                if len(image.shape) == 2:  # gray image
+                    image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 image, scale, pad = letterbox(np.array(image), 960, stride=64, auto=False)
                 image = np.transpose(image, (2, 0, 1))
                 batch_out['image'].append(np.array(image)/255)
