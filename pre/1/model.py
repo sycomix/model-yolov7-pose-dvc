@@ -14,7 +14,6 @@ from c_python_backend_utils import Tensor, InferenceResponse, InferenceRequest
 def letterbox(img, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleFill=False, scaleup=True, stride=32):
     # Resize and pad image while meeting stride-multiple constraints
     shape = img.shape[:2]  # current shape [height, width]
-    print("---->> PRE image ", shape)
     if isinstance(new_shape, int):
         new_shape = (new_shape, new_shape)
 
@@ -42,6 +41,7 @@ def letterbox(img, new_shape=(640, 640), color=(114, 114, 114), auto=True, scale
     left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
     img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
     return img, ratio, (dw, dh)
+
 
 class TritonPythonModel(object):
     def __init__(self):
