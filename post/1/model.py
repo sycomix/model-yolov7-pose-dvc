@@ -5,9 +5,8 @@ import numpy as np
 import torchvision
 import json
 
-from triton_python_backend_utils import Tensor, InferenceResponse, \
-    get_input_tensor_by_name, InferenceRequest, get_input_config_by_name, \
-    get_output_config_by_name, triton_string_to_numpy
+from triton_python_backend_utils import get_output_config_by_name, triton_string_to_numpy, get_input_config_by_name
+from c_python_backend_utils import Tensor, InferenceResponse, InferenceRequest
 
 def xywh2xyxy(x):
     # Convert nx4 boxes from [x, y, w, h] to [x1, y1, x2, y2] where xy1=top-left, xy2=bottom-right
