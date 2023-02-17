@@ -5,7 +5,7 @@ import numpy as np
 import torchvision
 import json
 
-from triton_python_backend_utils import get_output_config_by_name, triton_string_to_numpy, get_input_config_by_name
+from triton_python_backend_utils import get_output_config_by_name, triton_string_to_numpy, get_input_config_by_name, get_input_tensor_by_name
 from c_python_backend_utils import Tensor, InferenceResponse, InferenceRequest
 
 def xywh2xyxy(x):
