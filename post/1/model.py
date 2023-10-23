@@ -93,16 +93,15 @@ def non_max_suppression_kpt(prediction, conf_thres=0.25, iou_thres=0.45, classes
         if multi_label:
             i, j = (x[:, 5:] > conf_thres).nonzero(as_tuple=False).T
             x = torch.cat((box[i], x[i, j + 5, None], j[:, None].float()), 1)
-        else:  # best class only
-            if not kpt_label:
-                conf, j = x[:, 5:].max(1, keepdim=True)
-                x = torch.cat((box, conf, j.float()), 1)[conf.view(-1) > conf_thres]
-            else:
-                kpts = x[:, 6:]
-                conf, j = x[:, 5:6].max(1, keepdim=True)
-                x = torch.cat((box, conf, j.float(), kpts), 1)[conf.view(-1) > conf_thres]
+        elif kpt_label:
+            kpts = x[:, 6:]
+            conf, j = x[:, 5:6].max(1, keepdim=True)
+            x = torch.cat((box, conf, j.float(), kpts), 1)[conf.view(-1) > conf_thres]
 
 
+        else:
+            conf, j = x[:, 5:].max(1, keepdim=True)
+            x = torch.cat((box, conf, j.float()), 1)[conf.view(-1) > conf_thres]
         # Filter by class
         if classes is not None:
             x = x[(x[:, 5:6] == torch.tensor(classes, device=x.device)).any(1)]
@@ -137,7 +136,7 @@ def non_max_suppression_kpt(prediction, conf_thres=0.25, iou_thres=0.45, classes
         if (time.time() - t) > time_limit:
             print(f'WARNING: NMS time limit {time_limit}s exceeded')
             break  # time limit exceeded
-    
+
     return output
 
 
@@ -157,8 +156,16 @@ def output_to_keypoint(output):
     for i, o in enumerate(output):
         kpts = o[:,6:]
         o = o[:,:6]
-        for index, (*box, conf, cls) in enumerate(o.detach().cpu().numpy()):
-            targets.append([i, cls, *list(*xyxy2xywh(np.array(box)[None])), conf, *list(kpts.detach().cpu().numpy()[index])])
+        targets.extend(
+            [
+                i,
+                cls,
+                *list(*xyxy2xywh(np.array(box)[None])),
+                conf,
+                *list(kpts.detach().cpu().numpy()[index]),
+            ]
+            for index, (*box, conf, cls) in enumerate(o.detach().cpu().numpy())
+        )
     return np.array(targets)
 
 
@@ -249,10 +256,15 @@ class TritonPythonModel(object):
                 image_scale = batch_scale[i]
                 image_pad = batch_pad[i]
                 for obj in output:
-                    obj_kps = []
                     kps = obj[7:]
-                    for i in range(len(kps)//3):
-                        obj_kps.append([(kps[i*3]-image_pad[0])/image_scale[0], (kps[i*3+1]-image_pad[1])/image_scale[1], kps[i*3+2]])
+                    obj_kps = [
+                        [
+                            (kps[i * 3] - image_pad[0]) / image_scale[0],
+                            (kps[i * 3 + 1] - image_pad[1]) / image_scale[1],
+                            kps[i * 3 + 2],
+                        ]
+                        for i in range(len(kps) // 3)
+                    ]
                     image_kps.append(obj_kps)
                     box = obj[2:6]
                     cx, cy = (box[0], box[1])
@@ -271,7 +283,7 @@ class TritonPythonModel(object):
                 batch_boxes.append(image_boxes)
                 batch_scores.append(image_scores)
             # Add dummy key points for batching
-            max_objs = max([len(i) for i in batch_kps])
+            max_objs = max(len(i) for i in batch_kps)
             for i, image_kps in enumerate(batch_kps):
                 batch_out["kpoints"].append(image_kps + [[[-1, -1, -1]] * 17] * (max_objs - len(image_kps)))
                 batch_out["boxes"].append(batch_boxes[i] + [[-1, -1, -1, -1]] * (max_objs - len(image_kps)))
